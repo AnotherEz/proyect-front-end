@@ -6,5 +6,5 @@ const api = axios.create({
     baseURL: API_URL,
     withCredentials: true, // Necesario para Sanctum
 });
-
+ 
 export default api;
