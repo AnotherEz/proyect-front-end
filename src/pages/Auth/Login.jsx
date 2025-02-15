@@ -1,28 +1,48 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom"; // 🚀 Redirección mejorada
-import { login } from "../../api/authService";  // ✅ export { login } from "./Auth/Login.js";
-import "../../assets/Auth Sheets/s-Login.css"; // ✅ Importa los estilos globales de auth.css
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { login } from "../../api/authService";
+import api from "../../api/apiConfig"; // ✅ Verifica si la sesión está activa
+import "../../assets/Auth Sheets/s-Login.css";
 
 function Login() {
-  const navigate = useNavigate(); // 🚀 Hook para redirigir después del login
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // 🔹 Verificar si el usuario ya está autenticado al cargar la página
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        await api.get("/user"); // ✅ Laravel devuelve el usuario si está autenticado
+        navigate("/dashboard"); // 🚀 Si ya está autenticado, redirigir
+      } catch {
+        // No está autenticado, se mantiene en la página de login
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
+  // 🔹 Manejar el inicio de sesión
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(""); // Limpiar errores previos
+    setIsLoading(true);
 
     try {
-      await login(email, password);// ✅ Llama al servicio de autenticación
-      navigate("/dashboard"); // 🚀 Redirigir usando navigate()
+      await login(email, password);
+      navigate("/dashboard"); // ✅ Redirigir tras inicio de sesión
     } catch (err) {
-      setError(err.message || "Error al iniciar sesión");
+      setError(err?.message || "Error al iniciar sesión");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="auth-container"> {/* ✅ Usa el contenedor general del CSS */}
+    <div className="auth-container">
       <div className="auth-box">
         <h2 className="auth-title">Iniciar Sesión</h2>
 
@@ -66,8 +86,8 @@ function Login() {
             <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
           </div>
 
-          <button type="submit" className="auth-button">
-            Iniciar Sesión
+          <button type="submit" className="auth-button" disabled={isLoading}>
+            {isLoading ? "Cargando..." : "Iniciar Sesión"}
           </button>
         </form>
 

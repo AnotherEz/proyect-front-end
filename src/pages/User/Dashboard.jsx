@@ -1,123 +1,99 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getUser, logout, getDashboardStats } from "../../api/authService";
+import "../../assets/User Sheets/s-User.css";
 
 function Dashboard() {
-  const [user, setUser] = useState(null);
-  const [stats, setStats] = useState({});
-  const navigate = useNavigate();
+    const [user, setUser] = useState(null);
+    const [stats, setStats] = useState({});
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // ✅ Obtener el token de localStorage
-        const token = localStorage.getItem("token");
-        if (!token) {
-          throw new Error("No hay token, redirigiendo al login");
-        }
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const userData = await getUser();
+                
+                if (userData === false) { // 🔹 Solo redirigir si la sesión es inválida
+                    navigate("/login");
+                    return;
+                }
 
-        // ✅ Obtener datos del usuario autenticado
-        const response = await fetch("http://127.0.0.1:8000/api/user", {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`, // ✅ Enviar token
-          },
-        });
+                if (!userData) throw new Error("Error desconocido al obtener usuario");
 
-        if (!response.ok) {
-          throw new Error("No autorizado");
-        }
+                setUser(userData);
 
-        const data = await response.json();
-        if (!data.user) {
-          throw new Error("Sesión inválida");
-        }
+                // ✅ Obtener estadísticas del dashboard
+                const statsData = await getDashboardStats();
+                setStats(statsData);
+            } catch (error) {
+                console.error("Error en Dashboard:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        setUser(data.user);
+        fetchDashboardData();
+    }, [navigate]);
 
-        // ✅ Obtener datos del dashboard
-        const statsResponse = await fetch("http://127.0.0.1:8000/api/dashboard", {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`, // ✅ También enviar el token aquí
-          },
-        });
-
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats(statsData.stats);
-        }
-
-      } catch (error) {
-        console.error("Error en Dashboard:", error);
-        localStorage.removeItem("token"); // ✅ Eliminar el token si hay un problema
-        navigate("/login"); // ✅ Redirigir solo si la sesión es inválida
-      }
+    const handleLogout = async () => {
+        await logout();
+        navigate("/login"); // ✅ Asegura la redirección tras cerrar sesión
     };
 
-    fetchDashboardData();
-  }, [navigate]);
-
-  // ✅ Manejo de logout
-  const handleLogout = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      await fetch("http://127.0.0.1:8000/api/logout", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`, // ✅ Enviar el token para cerrar sesión
-        },
-      });
-
-      localStorage.removeItem("token"); // ✅ Eliminar el token
-      navigate("/login");
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
+    if (loading) {
+        return <p className="loading-message">Cargando...</p>;
     }
-  };
 
-  return (
-    <div className="dashboard-container">
-      <aside className="sidebar">
-        <h2>Mi Aplicación</h2>
-        <nav>
-          <ul>
-            <li><a href="#">Inicio</a></li>
-            <li><a href="#">Perfil</a></li>
-            <li><a href="#">Configuración</a></li>
-          </ul>
-        </nav>
-      </aside>
+    return (
+        <div className="dashboard-container">
+            <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
+                <h2>Mi Aplicación</h2>
+                <nav>
+                    <ul>
+                        <li><a href="/">Inicio</a></li>
+                        <li><a href="/perfil">Perfil</a></li>
+                        <li><a href="/configuracion">Configuración</a></li>
+                    </ul>
+                </nav>
+            </aside>
 
-      <main className="dashboard-content">
-        <header>
-          <h2>¡Bienvenido, {user?.first_name}!</h2>
-          <button onClick={handleLogout}>Cerrar sesión</button>
-        </header>
+            <main className={`dashboard-content ${sidebarOpen ? "with-sidebar" : ""}`}>
+                <header>
+                    <div className="header-left">
+                        <button
+                            className="menu-button"
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            aria-label="Abrir menú"
+                        >
+                            {sidebarOpen ? "✕" : "☰"}
+                        </button>
+                        <h2>¡Bienvenido, {user?.first_name || "Usuario"}!</h2>
+                    </div>
 
-        <section className="stats">
-          <div className="stat-card">
-            <h3>Estadísticas</h3>
-            <p>Progreso de proyectos: {stats.progreso_proyectos || 0}%</p>
-          </div>
-          <div className="stat-card">
-            <h3>Tareas</h3>
-            <p>Tareas pendientes: {stats.tareas_pendientes || 0}</p>
-          </div>
-          <div className="stat-card">
-            <h3>Mensajes</h3>
-            <p>Mensajes no leídos: {stats.mensajes_no_leidos || 0}</p>
-          </div>
-        </section>
-      </main>
-    </div>
-  );
+                    <button className="logout-button" onClick={handleLogout}>
+                        Cerrar sesión
+                    </button>
+                </header>
+
+                <section className="stats">
+                    <div className="stat-card">
+                        <h3>Estadísticas</h3>
+                        <p>Progreso de proyectos: {stats.progreso_proyectos ?? 0}%</p>
+                    </div>
+                    <div className="stat-card">
+                        <h3>Tareas</h3>
+                        <p>Tareas pendientes: {stats.tareas_pendientes ?? 0}</p>
+                    </div>
+                    <div className="stat-card">
+                        <h3>Mensajes</h3>
+                        <p>Mensajes no leídos: {stats.mensajes_no_leidos ?? 0}</p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    );
 }
 
 export default Dashboard;

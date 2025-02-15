@@ -2,10 +2,9 @@ import api from "../apiConfig.js";
 // Función para cerrar sesión
 export const logout = async () => {
     try {
-      const response = await api.post("/logout");
-      localStorage.removeItem("token"); // Elimina el token
-      return response.data;
+        await api.post("/logout");
+        window.location.href = "/login"; // Redirige al login tras cerrar sesión
     } catch (error) {
-      throw error.response?.data || "Error al cerrar sesión";
+        console.error("Error al cerrar sesión", error);
     }
-  };
+};
