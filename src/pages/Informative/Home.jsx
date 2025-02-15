@@ -1,9 +1,8 @@
 
-import '../assets/animations.css';
-import '../assets/main.css';
+import '../../assets/Informative Sheets/animations.css';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { WavyBackground } from './background';
+import { WavyBackground } from '../../components/organisms/background';
 // Componente principal: Home
 function Home() {
   return (

@@ -1,4 +1,4 @@
-import { WavyBackground } from "./background";
+import { WavyBackground } from "../../components/organisms/background";
 
 function Servicios() {
   return (

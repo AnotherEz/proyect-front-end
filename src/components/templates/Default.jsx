@@ -1,4 +1,4 @@
-import { WavyBackground } from "../../pages/background";
+import { WavyBackground } from "../organisms/background";
 
 function Default() {
 

@@ -1,4 +1,4 @@
-import '../../assets/animations.css';
+import '../../assets/Informative Sheets/animations.css';
 import '../../assets/main.css';
 import { Outlet , Link} from "react-router-dom";
 function Header(){
