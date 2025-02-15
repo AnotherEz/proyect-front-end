@@ -1,6 +1,6 @@
 
-import '../CSS/animations.css';
-import '../CSS/main.css';
+import '../assets/animations.css';
+import '../assets/main.css';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { WavyBackground } from './background';
