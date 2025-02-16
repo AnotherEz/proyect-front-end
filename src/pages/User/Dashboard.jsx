@@ -12,15 +12,22 @@ function Dashboard() {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
+            setLoading(true); // ✅ Asegurar que la carga no termine antes de recibir datos
+
             try {
                 const userData = await getUser();
-                
-                if (userData === false) { // 🔹 Solo redirigir si la sesión es inválida
+                console.log("User data obtenida en Dashboard:", userData); // 🔥 DEPURACIÓN
+
+                if (userData === false) { 
+                    console.warn("Sesión no válida, redirigiendo...");
                     navigate("/login");
                     return;
                 }
 
-                if (!userData) throw new Error("Error desconocido al obtener usuario");
+                if (!userData) {
+                    console.error("Error desconocido al obtener usuario");
+                    return;
+                }
 
                 setUser(userData);
 
@@ -30,7 +37,7 @@ function Dashboard() {
             } catch (error) {
                 console.error("Error en Dashboard:", error);
             } finally {
-                setLoading(false);
+                setLoading(false); // ✅ Liberar la carga después de recibir la respuesta
             }
         };
 
