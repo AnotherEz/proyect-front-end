@@ -1,106 +1,105 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getUser, logout, getDashboardStats } from "../../api/authService";
+import { getUser, logout } from "../../api/authService";
+import Loader from "../../components/atoms/Loader";
 import "../../assets/User Sheets/s-User.css";
 
 function Dashboard() {
-    const [user, setUser] = useState(null);
-    const [stats, setStats] = useState({});
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            setLoading(true); // ✅ Asegurar que la carga no termine antes de recibir datos
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      const token = localStorage.getItem("authToken");
 
-            try {
-                const userData = await getUser();
-                console.log("User data obtenida en Dashboard:", userData); // 🔥 DEPURACIÓN
+      if (!token) {
+        navigate("/login", { replace: true }); // Redirige inmediatamente si no hay token
+        return;
+      }
 
-                if (userData === false) { 
-                    console.warn("Sesión no válida, redirigiendo...");
-                    navigate("/login");
-                    return;
-                }
+      try {
+        const response = await getUser(token);
 
-                if (!userData) {
-                    console.error("Error desconocido al obtener usuario");
-                    return;
-                }
-
-                setUser(userData);
-
-                // ✅ Obtener estadísticas del dashboard
-                const statsData = await getDashboardStats();
-                setStats(statsData);
-            } catch (error) {
-                console.error("Error en Dashboard:", error);
-            } finally {
-                setLoading(false); // ✅ Liberar la carga después de recibir la respuesta
-            }
-        };
-
-        fetchDashboardData();
-    }, [navigate]);
-
-    const handleLogout = async () => {
-        await logout();
-        navigate("/login"); // ✅ Asegura la redirección tras cerrar sesión
+        if (response?.data) {
+          setUser(response.data); // ✅ Cargar datos del usuario
+        } else {
+          console.warn("Sesión no válida. Redirigiendo...");
+          localStorage.removeItem("authToken");
+          navigate("/login", { replace: true });
+        }
+      } catch (error) {
+        console.error("Error al obtener datos del usuario:", error);
+        localStorage.removeItem("authToken");
+        navigate("/login", { replace: true });
+      } finally {
+        setLoading(false); // Finalizar loader
+      }
     };
 
-    if (loading) {
-        return <p className="loading-message">Cargando...</p>;
+    fetchDashboardData();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      try {
+        await logout(token);
+        localStorage.removeItem("authToken");
+        navigate("/login", { replace: true });
+      } catch (error) {
+        console.error("Error al cerrar sesión:", error);
+      }
     }
+  };
 
-    return (
-        <div className="dashboard-container">
-            <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-                <h2>Mi Aplicación</h2>
-                <nav>
-                    <ul>
-                        <li><a href="/">Inicio</a></li>
-                        <li><a href="/perfil">Perfil</a></li>
-                        <li><a href="/configuracion">Configuración</a></li>
-                    </ul>
-                </nav>
-            </aside>
+  // 🕹️ Mostrar loader mientras se cargan los datos
+  if (loading) {
+    return <Loader />;
+  }
 
-            <main className={`dashboard-content ${sidebarOpen ? "with-sidebar" : ""}`}>
-                <header>
-                    <div className="header-left">
-                        <button
-                            className="menu-button"
-                            onClick={() => setSidebarOpen(!sidebarOpen)}
-                            aria-label="Abrir menú"
-                        >
-                            {sidebarOpen ? "✕" : "☰"}
-                        </button>
-                        <h2>¡Bienvenido, {user?.first_name || "Usuario"}!</h2>
-                    </div>
+  return (
+    <div className="dashboard-container">
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
+        <h2>Mi Aplicación</h2>
+        <nav>
+          <ul>
+            <li><a href="/">Inicio</a></li>
+            <li><a href="/perfil">Perfil</a></li>
+            <li><a href="/configuracion">Configuración</a></li>
+          </ul>
+        </nav>
+      </aside>
 
-                    <button className="logout-button" onClick={handleLogout}>
-                        Cerrar sesión
-                    </button>
-                </header>
+      <main className={`dashboard-content ${sidebarOpen ? "with-sidebar" : ""}`}>
+        <header>
+          <div className="header-left">
+            <button
+              className="menu-button"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label="Abrir menú"
+            >
+              {sidebarOpen ? "✕" : "☰"}
+            </button>
+            <h2>¡Bienvenido, {user?.first_name || "Usuario"}!</h2>
+          </div>
 
-                <section className="stats">
-                    <div className="stat-card">
-                        <h3>Estadísticas</h3>
-                        <p>Progreso de proyectos: {stats.progreso_proyectos ?? 0}%</p>
-                    </div>
-                    <div className="stat-card">
-                        <h3>Tareas</h3>
-                        <p>Tareas pendientes: {stats.tareas_pendientes ?? 0}</p>
-                    </div>
-                    <div className="stat-card">
-                        <h3>Mensajes</h3>
-                        <p>Mensajes no leídos: {stats.mensajes_no_leidos ?? 0}</p>
-                    </div>
-                </section>
-            </main>
-        </div>
-    );
+          <button className="logout-button" onClick={handleLogout}>
+            Cerrar sesión
+          </button>
+        </header>
+
+        <section className="user-info">
+          <h3>Datos del Usuario</h3>
+          <div className="user-details">
+            <p><strong>Nombre:</strong> {user?.first_name} {user?.last_name}</p>
+            <p><strong>Email:</strong> {user?.email}</p>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 }
 
 export default Dashboard;

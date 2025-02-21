@@ -14,7 +14,7 @@ export const getUser = async () => {
         console.error("Error al obtener el usuario:", error);
 
         // 🔹 Si Laravel responde con 401, significa que la sesión es inválida
-        if (error.response && error.response.status === 401) {
+        if (error.response && error.response.status == 401) {
             console.warn("⚠️ Sesión no válida, redirigiendo...");
             return false; // ✅ El frontend manejará la redirección en `Dashboard.jsx`
         }

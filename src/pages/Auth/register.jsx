@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { register, getUser } from "../../api/authService"; // ✅ Servicio de autenticación
-import "../../assets/Auth Sheets/s-Login.css"; // ✅ CSS unificado para Login y Registro
-
+import { register, login, getUser } from "../../api/authService";
+import "../../assets/Auth Sheets/s-Login.css";
+import Loader from "../../components/atoms/Loader"; 
 
 function Register() {
   const navigate = useNavigate();
@@ -19,76 +19,118 @@ function Register() {
   const [error, setError] = useState(null);
   const [emailError, setEmailError] = useState("");
   const [passwordMatch, setPasswordMatch] = useState(null);
+  const [showPassword, setShowPassword] = useState({
+    password: false,
+    password_confirmation: false,
+  });
+  const [isLoading, setIsLoading] = useState(false); // Loader para el formulario
+  const [checkingSession, setCheckingSession] = useState(true); // Loader para la sesión
+
+  // ✅ Verificar sesión activa al cargar el componente
+  useEffect(() => {
+    const checkSession = async () => {
+      const token = localStorage.getItem("authToken");
+
+      if (token) {
+        try {
+          await getUser(token); // Verificar token
+          navigate("/dashboard", { replace: true }); // Redirigir sin renderizar Register
+          return; // Salir antes de setear estados para evitar render innecesario
+        } catch (err) {
+          console.error("Error al verificar sesión:", err);
+        }
+      }
+
+      setCheckingSession(false); // Solo muestra el formulario si no hay sesión activa
+    };
+
+    checkSession();
+  }, [navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Limpiar error de email si está escribiendo
     if (name === "email") setEmailError("");
 
-    // Validación de coincidencia de contraseñas
     if (name === "password" || name === "password_confirmation") {
       setPasswordMatch(
-        formData.password !== "" &&
-        formData.password_confirmation !== "" &&
-        formData.password === value
+        name === "password"
+          ? value === formData.password_confirmation
+          : formData.password === value
       );
     }
+  };
+
+  const togglePassword = (field) => {
+    setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setEmailError("");
+    setIsLoading(true); // 🔄 Mostrar loader durante el registro
 
     if (formData.password !== formData.password_confirmation) {
       setPasswordMatch(false);
+      setIsLoading(false);
       return;
     }
 
     try {
-      
-      await register(formData); // ✅ Llama al servicio de autenticación
+      await register(formData); // Registrar usuario
 
-      // 🚀 Verifica si el usuario realmente está autenticado antes de redirigir
-      const sessionData = await getUser();
-      if (sessionData) {
-        navigate("/dashboard"); // ✅ Redirigir automáticamente
-      } else {
-        navigate("/login"); // ❌ Si algo falla, redirigir al login
-      }
+      const loginResponse = await login({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      const token = loginResponse.data.access_token;
+      localStorage.setItem("authToken", token); // Guardar token
+
+      const sessionData = await getUser(token); // Verificar sesión
+
+      navigate(sessionData ? "/dashboard" : "/login", { replace: true }); // Redirigir
     } catch (err) {
-      if (err.message?.includes("email has already been taken")) {
+      const errorMsg = err.response?.data?.message || "Error al registrarse";
+      if (errorMsg.includes("email has already been taken")) {
         setEmailError("El correo ya está registrado. Usa otro.");
       } else {
-        setError(err.message || "Error al registrarse");
+        setError(errorMsg);
       }
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // Mostrar solo el loader mientras se verifica la sesión
+  if (checkingSession) {
+    return <Loader />;
+  }
 
   return (
     <div className="auth-container">
       <div className="auth-box">
         <h2 className="auth-title">Registro</h2>
 
-        {error && <p className="error-text">{error}</p>}
+        {error && <p className="error-text">❌ {error}</p>}
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <div className="input-group">
-            <label htmlFor="nombres">Nombres</label>
-            <input type="text" id="nombres" name="nombres" required value={formData.nombres} onChange={handleChange} />
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="apellido_paterno">Apellido Paterno</label>
-            <input type="text" id="apellido_paterno" name="apellido_paterno" required value={formData.apellido_paterno} onChange={handleChange} />
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="apellido_materno">Apellido Materno</label>
-            <input type="text" id="apellido_materno" name="apellido_materno" required value={formData.apellido_materno} onChange={handleChange} />
-          </div>
+          {["nombres", "apellido_paterno", "apellido_materno"].map((field) => (
+            <div className="input-group" key={field}>
+              <label htmlFor={field}>{field.replace("_", " ").toUpperCase()}</label>
+              <input
+                type="text"
+                id={field}
+                name={field}
+                required
+                value={formData[field]}
+                onChange={handleChange}
+                placeholder={`Ingresa tu ${field.replace("_", " ")}`}
+              />
+            </div>
+          ))}
 
           <div className="input-group">
             <label htmlFor="email">Correo Electrónico</label>
@@ -100,51 +142,52 @@ function Register() {
               value={formData.email}
               onChange={handleChange}
               className={emailError ? "input-error" : ""}
+              placeholder="tu-email@ejemplo.com"
             />
-            {emailError && <p className="error-text">{emailError}</p>}
+            {emailError && <p className="error-text">⚠️ {emailError}</p>}
           </div>
 
-          <div className="input-group">
-            <label htmlFor="password">Contraseña</label>
-            <div className="password-wrapper">
-              <input
-                type="password"
-                id="password"
-                name="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                className={`password-input ${
-                  passwordMatch === false ? "password-mismatch" : passwordMatch ? "password-match" : ""
-                }`}
-              />
-              <span onClick={() => togglePassword("password")} className="password-toggle-btn">
-                <i id="passwordToggleIcon" className="fas fa-eye"></i>
-              </span>
+          {["password", "password_confirmation"].map((field) => (
+            <div className="input-group" key={field}>
+              <label htmlFor={field}>
+                {field === "password" ? "Contraseña" : "Confirmar Contraseña"}
+              </label>
+              <div className="password-wrapper">
+                <input
+                  type={showPassword[field] ? "text" : "password"}
+                  id={field}
+                  name={field}
+                  required
+                  value={formData[field]}
+                  onChange={handleChange}
+                  className={`password-input ${
+                    passwordMatch === false && field === "password_confirmation"
+                      ? "password-mismatch"
+                      : passwordMatch
+                      ? "password-match"
+                      : ""
+                  }`}
+                  placeholder={field === "password" ? "••••••••" : "Repite la contraseña"}
+                />
+                <button
+                  type="button"
+                  onClick={() => togglePassword(field)}
+                  className="password-toggle-btn"
+                  aria-label={showPassword[field] ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  <i className={showPassword[field] ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+                </button>
+              </div>
             </div>
-          </div>
+          ))}
 
-          <div className="input-group">
-            <label htmlFor="password_confirmation">Confirmar Contraseña</label>
-            <div className="password-wrapper">
-              <input
-                type="password"
-                id="password_confirmation"
-                name="password_confirmation"
-                required
-                value={formData.password_confirmation}
-                onChange={handleChange}
-                className={`password-input ${
-                  passwordMatch === false ? "password-mismatch" : passwordMatch ? "password-match" : ""
-                }`}
-              />
-              <span onClick={() => togglePassword("password_confirmation")} className="password-toggle-btn">
-                <i id="passwordConfirmationToggleIcon" className="fas fa-eye"></i>
-              </span>
-            </div>
-          </div>
+          {passwordMatch === false && (
+            <p className="error-text">⚠️ Las contraseñas no coinciden.</p>
+          )}
 
-          <button type="submit" className="auth-button">Registrarse</button>
+          <button type="submit" className="auth-button" disabled={isLoading}>
+            {isLoading ? "Registrando..." : "Registrarse"}
+          </button>
         </form>
 
         <div className="auth-link">
@@ -153,20 +196,6 @@ function Register() {
       </div>
     </div>
   );
-}
-
-// ✅ Función para mostrar/ocultar contraseña
-function togglePassword(field) {
-  const passwordInput = document.getElementById(field);
-  const passwordToggleIcon = document.getElementById(`${field}ToggleIcon`);
-
-  if (passwordInput.type === "password") {
-    passwordInput.type = "text";
-    passwordToggleIcon.classList.replace("fa-eye", "fa-eye-slash");
-  } else {
-    passwordInput.type = "password";
-    passwordToggleIcon.classList.replace("fa-eye-slash", "fa-eye");
-  }
 }
 
 export default Register;

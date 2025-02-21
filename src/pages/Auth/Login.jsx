@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../../api/authService";
-import api from "../../api/apiConfig"; // ✅ Verifica si la sesión está activa
+import { login, getUser } from "../../api/authService";
+import Loader from "../../components/atoms/Loader";
 import "../../assets/Auth Sheets/s-Login.css";
 
 function Login() {
@@ -10,36 +10,50 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Loader durante inicio de sesión
+  const [checkingSession, setCheckingSession] = useState(true); // Loader durante verificación de sesión
 
-  // 🔹 Verificar si el usuario ya está autenticado al cargar la página
   useEffect(() => {
     const checkSession = async () => {
-      try {
-        await api.get("/user"); // ✅ Laravel devuelve el usuario si está autenticado
-        navigate("/dashboard"); // 🚀 Si ya está autenticado, redirigir
-      } catch {
-        // No está autenticado, se mantiene en la página de login
+      const token = localStorage.getItem("authToken");
+
+      if (token) {
+        try {
+          await getUser(token); // Verificar token
+          navigate("/dashboard", { replace: true }); // Redirigir sin renderizar Login
+          return; // Salir antes de setear estados para evitar render innecesario
+        } catch (err) {
+          console.error("Error al verificar sesión:", err);
+        }
       }
+
+      setCheckingSession(false); // Solo se muestra el formulario si no hay sesión
     };
+
     checkSession();
   }, [navigate]);
 
-  // 🔹 Manejar el inicio de sesión
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Limpiar errores previos
-    setIsLoading(true);
+    setError("");
+    setIsLoading(true); // Mostrar loader mientras inicia sesión
 
     try {
-      await login(email, password);
-      navigate("/dashboard"); // ✅ Redirigir tras inicio de sesión
+      const response = await login({ email, password });
+      const token = response.data.access_token;
+      localStorage.setItem("authToken", token); // Guardar token
+      navigate("/dashboard", { replace: true }); // Redirigir al dashboard
     } catch (err) {
-      setError(err?.message || "Error al iniciar sesión");
+      setError(err?.response?.data?.message || "Credenciales incorrectas");
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Ocultar loader al finalizar
     }
   };
+
+  // 🌀 Si se está verificando la sesión, mostrar solo el loader y nada más
+  if (checkingSession) {
+    return <Loader />;
+  }
 
   return (
     <div className="auth-container">
@@ -71,14 +85,15 @@ function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="password-input"
               />
-              <span
-                onClick={() => setShowPassword(!showPassword)}
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
                 className="password-toggle-btn"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
                 <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
-              </span>
+              </button>
             </div>
           </div>
 

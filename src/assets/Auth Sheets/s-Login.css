@@ -1,4 +1,5 @@
 
+@import url('./loaders.css');
 /* Fondo con animación de gradiente */
 body {
     background: linear-gradient(270deg, #6a11cb, #2575fc);
@@ -164,3 +165,6 @@ body {
 .password-input {
     padding-right: 2.5rem;
 }
+
+
+
