@@ -11,3 +11,6 @@ export const getUser = (token) => api.get('/user', { headers: { Authorization: `
 
 // Cerrar sesión
 export const logout = (token) => api.post('/logout', {}, { headers: { Authorization: `Bearer ${token}` } });
+
+// Solicitar redirección para login con Google
+export const googleLoginRedirect = () => api.get('/google-auth/redirect');

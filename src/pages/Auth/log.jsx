@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login, googleLoginRedirect, getUser } from "../../api/authService"; // Usamos las funciones del authService
-import { setAuthToken, getAuthToken } from "../../utils/token"; // Helpers para gestionar el token
-import Loader from "../../components/atoms/Loader"; 
-import "../../assets/Auth Sheets/s-Login.css"; // Agrega tus estilos aquí
+//import { login } from "../../api/authService";
+import api from "../../api/apiConfig"; // Verifica si la sesión está activa
+import axios from "axios";  // Importar Axios
+import "../../assets/Auth Sheets/s-Login.css";
+import Loader from "../../components/atoms/Loader"; // Importar Loader
 
 function Login() {
   const navigate = useNavigate();
@@ -12,18 +13,25 @@ function Login() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true); // Controla la carga de la sesión
+  const [checkingSession, setCheckingSession] = useState(true); // Añadido para controlar la carga de la sesión
 
   // 🔹 Verificar si el usuario ya está autenticado al cargar la página
   useEffect(() => {
     const checkSession = async () => {
-      const token = getAuthToken(); // Obtener el token de localStorage
+      const token = localStorage.getItem("authToken");
 
       if (token) {
         try {
-          // Verificar que el token esté activo usando el getUser del authService
-          await getUser(token);
-          navigate("/dashboard"); // Si ya está autenticado, redirigir
+          // Verificar que el token esté activo
+          const response = await api.get("/user", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (response?.data) {
+            navigate("/dashboard"); // 🚀 Si ya está autenticado, redirigir al dashboard
+            return; // Salir para evitar renderizar el formulario
+          }
         } catch (err) {
           console.error("Error al verificar la sesión:", err);
         }
@@ -33,30 +41,39 @@ function Login() {
     checkSession();
   }, [navigate]);
 
-  // 🔹 Manejar el inicio de sesión con email y contraseña
-  const handleSubmit = async (e) => {
+   // 🔹 Manejar el inicio de sesión
+   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(""); // Limpiar errores previos
     setIsLoading(true);
-
+  
     try {
-      const response = await login({ email, password });
-      setAuthToken(response.data.access_token); // Guardamos el token en el almacenamiento local
-      navigate("/dashboard"); // Redirigimos a la página de dashboard
+      // Hacer la solicitud al backend con email y password
+      const response = await axios.post("http://127.0.0.1:8000/api/login", {
+        email,
+        password,
+      });
+  
+      // Al obtener el token, redirigir al dashboard
+      const { access_token } = response.data;
+      localStorage.setItem("authToken", access_token);
+      navigate("/dashboard"); // Redirigir tras inicio de sesión exitoso
     } catch (err) {
+      // Si hay un error, manejarlo
       setError(err?.response?.data?.message || "Error al iniciar sesión");
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   // 🔹 Manejo del login con Google
   const handleGoogleLogin = async () => {
     setIsLoading(true);
 
     try {
-      // Obtener la URL de redirección de Google desde el backend
-      const response = await googleLoginRedirect();
+      // Obtener la URL de redirección de Google desde el backend usando Axios
+      const response = await axios.get("http://127.0.0.1:8000/api/google-auth/redirect");
 
       if (response.data.url) {
         // Redirigir al usuario a Google para la autenticación
@@ -72,7 +89,7 @@ function Login() {
     }
   };
 
-  // Mostrar el loader mientras verificamos la sesión
+  // Mostrar solo el loader mientras se verifica la sesión
   if (checkingSession) {
     return <Loader />;
   }
@@ -107,8 +124,12 @@ function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                className="password-input"
               />
-              <span onClick={() => setShowPassword(!showPassword)} className="password-toggle-btn">
+              <span
+                onClick={() => setShowPassword(!showPassword)}
+                className="password-toggle-btn"
+              >
                 <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
               </span>
             </div>
