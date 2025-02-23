@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login, getUser } from "../../api/authService";
-import Loader from "../../components/atoms/Loader";
+//import { login } from "../../api/authService";
+import api from "../../api/apiConfig"; // Verifica si la sesión está activa
+import axios from "axios";  // Importar Axios
 import "../../assets/Auth Sheets/s-Login.css";
+import Loader from "../../components/atoms/Loader"; // Importar Loader
 
 function Login() {
   const navigate = useNavigate();
@@ -10,47 +12,84 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Loader durante inicio de sesión
-  const [checkingSession, setCheckingSession] = useState(true); // Loader durante verificación de sesión
+  const [isLoading, setIsLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true); // Añadido para controlar la carga de la sesión
 
+  // 🔹 Verificar si el usuario ya está autenticado al cargar la página
   useEffect(() => {
     const checkSession = async () => {
       const token = localStorage.getItem("authToken");
 
       if (token) {
         try {
-          await getUser(token); // Verificar token
-          navigate("/dashboard", { replace: true }); // Redirigir sin renderizar Login
-          return; // Salir antes de setear estados para evitar render innecesario
+          // Verificar que el token esté activo
+          const response = await api.get("/user", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (response?.data) {
+            navigate("/dashboard"); // 🚀 Si ya está autenticado, redirigir al dashboard
+            return; // Salir para evitar renderizar el formulario
+          }
         } catch (err) {
-          console.error("Error al verificar sesión:", err);
+          console.error("Error al verificar la sesión:", err);
         }
       }
-
-      setCheckingSession(false); // Solo se muestra el formulario si no hay sesión
+      setCheckingSession(false); // Solo muestra el formulario si no hay sesión activa
     };
-
     checkSession();
   }, [navigate]);
 
-  const handleSubmit = async (e) => {
+   // 🔹 Manejar el inicio de sesión
+   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true); // Mostrar loader mientras inicia sesión
+    setError(""); // Limpiar errores previos
+    setIsLoading(true);
+  
+    try {
+      // Hacer la solicitud al backend con email y password
+      const response = await axios.post("http://127.0.0.1:8000/api/login", {
+        email,
+        password,
+      });
+  
+      // Al obtener el token, redirigir al dashboard
+      const { access_token } = response.data;
+      localStorage.setItem("authToken", access_token);
+      navigate("/dashboard"); // Redirigir tras inicio de sesión exitoso
+    } catch (err) {
+      // Si hay un error, manejarlo
+      setError(err?.response?.data?.message || "Error al iniciar sesión");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+
+  // 🔹 Manejo del login con Google
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
 
     try {
-      const response = await login({ email, password });
-      const token = response.data.access_token;
-      localStorage.setItem("authToken", token); // Guardar token
-      navigate("/dashboard", { replace: true }); // Redirigir al dashboard
+      // Obtener la URL de redirección de Google desde el backend usando Axios
+      const response = await axios.get("http://127.0.0.1:8000/api/google-auth/redirect");
+
+      if (response.data.url) {
+        // Redirigir al usuario a Google para la autenticación
+        window.location.href = response.data.url;
+      } else {
+        setError("No se pudo obtener la URL de Google para la autenticación.");
+      }
     } catch (err) {
-      setError(err?.response?.data?.message || "Credenciales incorrectas");
+      console.error("Error al obtener la URL de Google:", err);
+      setError("Hubo un error al intentar autenticar con Google.");
     } finally {
-      setIsLoading(false); // Ocultar loader al finalizar
+      setIsLoading(false);
     }
   };
 
-  // 🌀 Si se está verificando la sesión, mostrar solo el loader y nada más
+  // Mostrar solo el loader mientras se verifica la sesión
   if (checkingSession) {
     return <Loader />;
   }
@@ -85,20 +124,15 @@ function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                className="password-input"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((prev) => !prev)}
+              <span
+                onClick={() => setShowPassword(!showPassword)}
                 className="password-toggle-btn"
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
                 <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
-              </button>
+              </span>
             </div>
-          </div>
-
-          <div className="auth-link">
-            <a href="/forgot-password">¿Olvidaste tu contraseña?</a>
           </div>
 
           <button type="submit" className="auth-button" disabled={isLoading}>
@@ -108,6 +142,13 @@ function Login() {
 
         <div className="auth-link">
           <a href="/register">¿No tienes cuenta? Regístrate aquí</a>
+        </div>
+
+        {/* Botón de Google */}
+        <div className="google-login">
+          <button className="google-button" onClick={handleGoogleLogin}>
+            <i className="fab fa-google"></i> Iniciar sesión con Google
+          </button>
         </div>
       </div>
     </div>

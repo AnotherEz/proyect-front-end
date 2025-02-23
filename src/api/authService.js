@@ -1,10 +1,13 @@
+import api from './apiConfig'; // Importa la configuración de la base URL
 
-import axios from 'axios';
+// Registrar un nuevo usuario
+export const register = (userData) => api.post('/register', userData);
 
-axios.defaults.baseURL = 'http://127.0.0.1:8000/api';
+// Hacer login con email y contraseña
+export const login = (credentials) => api.post('/login', credentials);
 
-export const register = (userData) => axios.post('/register', userData);
-export const login = (credentials) => axios.post('/login', credentials);
-export const getUser = (token) => axios.get('/user', { headers: { Authorization: `Bearer ${token}` } });
-export const logout = (token) => axios.post('/logout', {}, { headers: { Authorization: `Bearer ${token}` } });
+// Obtener datos del usuario autenticado
+export const getUser = (token) => api.get('/user', { headers: { Authorization: `Bearer ${token}` } });
 
+// Cerrar sesión
+export const logout = (token) => api.post('/logout', {}, { headers: { Authorization: `Bearer ${token}` } });

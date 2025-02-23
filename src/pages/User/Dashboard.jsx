@@ -12,18 +12,29 @@ function Dashboard() {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      const token = localStorage.getItem("authToken");
+      // Obtener el token de la URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get("access_token");
 
-      if (!token) {
-        navigate("/login", { replace: true }); // Redirige inmediatamente si no hay token
-        return;
+      if (token) {
+        // Guardar el token en localStorage
+        localStorage.setItem("authToken", token);
+
+        // Limpiar el token de la URL para evitar que se quede visible
+        window.history.replaceState({}, document.title, "/dashboard");
+      } else {
+        const savedToken = localStorage.getItem("authToken");
+        if (!savedToken) {
+          navigate("/login", { replace: true }); // Redirige al login si no hay token
+          return;
+        }
       }
 
       try {
-        const response = await getUser(token);
-
+        // Obtener los datos del usuario utilizando el token
+        const response = await getUser(localStorage.getItem("authToken"));
         if (response?.data) {
-          setUser(response.data); // ✅ Cargar datos del usuario
+          setUser(response.data); // Si los datos del usuario son correctos, cargarlos
         } else {
           console.warn("Sesión no válida. Redirigiendo...");
           localStorage.removeItem("authToken");
@@ -34,7 +45,7 @@ function Dashboard() {
         localStorage.removeItem("authToken");
         navigate("/login", { replace: true });
       } finally {
-        setLoading(false); // Finalizar loader
+        setLoading(false); // Finalizar el loading
       }
     };
 
@@ -54,7 +65,7 @@ function Dashboard() {
     }
   };
 
-  // 🕹️ Mostrar loader mientras se cargan los datos
+  // Mostrar loader mientras se cargan los datos
   if (loading) {
     return <Loader />;
   }
