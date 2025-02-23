@@ -5,52 +5,66 @@ import { handleError } from '../utils/errorHandler';
 
 export const useAuth = (navigate) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false); // Controla la carga del login
   const [error, setError] = useState('');
 
-  // Verificar si hay sesión activa al montar el hook
   useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      getUser(token)
-        .then((res) => setUser(res.data))
-        .catch(() => removeAuthToken())
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, []);
+    const verifySession = async () => {
+      const token = getAuthToken();
+      if (token) {
+        try {
+          const response = await getUser(token);
+          setUser(response.data);
+          navigate('/dashboard', { replace: true });
+        } catch {
+          removeAuthToken(); // Si el token es inválido, lo eliminamos
+        }
+      }
+      setCheckingSession(false); // Finalizamos la verificación
+    };
+
+    verifySession();
+  }, [navigate]);
 
   const handleLogin = async (credentials) => {
+    setAuthLoading(true);
+    setError('');
     try {
       const { data } = await login(credentials);
       setAuthToken(data.access_token);
-      setUser(await getUser(data.access_token));
-      navigate('/dashboard');
+      setUser((await getUser(data.access_token)).data);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(handleError(err));
+    } finally {
+      setAuthLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setAuthLoading(true);
     try {
       const { data } = await googleLoginRedirect();
-      window.location.href = data.url; // Redirige a Google
+      window.location.href = data.url;
     } catch (err) {
       setError(handleError(err));
+    } finally {
+      setAuthLoading(false);
     }
   };
 
   const logout = () => {
     removeAuthToken();
     setUser(null);
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   return {
     user,
     error,
-    loading,
+    checkingSession,
+    authLoading,
     handleLogin,
     handleGoogleLogin,
     logout,
