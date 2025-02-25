@@ -47,12 +47,18 @@ const LoginForm = ({
     <button type="submit" className="auth-button" disabled={isLoading}>
       {isLoading ? "Cargando..." : "Iniciar Sesión"}
     </button>
-
-    <div className="google-login">
-      <button type="button" className="google-button" onClick={onGoogleLogin} disabled={isLoading}>
-        <i className="fab fa-google"></i> Iniciar sesión con Google
+    <div className="google-login flex justify-center mt-4">
+      <button 
+        type="button" 
+        className="google-button rounded-2xl px-6 py-3 text-lg font-semibold shadow-md hover:shadow-lg transition-all duration-300 ease-in-out bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2 w-full max-w-xs disabled:opacity-50 disabled:cursor-not-allowed" 
+        onClick={onGoogleLogin} 
+        disabled={isLoading} >
+        <i className="fab fa-google text-xl"></i> Iniciar sesión con Google
       </button>
     </div>
+
+
+    
   </form>
 );
 
