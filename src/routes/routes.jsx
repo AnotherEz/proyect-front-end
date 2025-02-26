@@ -8,6 +8,7 @@ import Login from "../pages/Auth/login";
 import Dashboard from "../pages/User/Dashboard";
 import Register from "../pages/Auth/register";
 
+
 const AppRoutes = () => {
   return (
     <Routes>
