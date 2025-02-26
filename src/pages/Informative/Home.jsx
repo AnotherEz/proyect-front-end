@@ -1,4 +1,4 @@
-import '../../assets/Informative Sheets/animations.css';
+import '../../assets/informative-sheets/animations.css';
 import '../../assets/main.css';
 import { Link } from 'react-router-dom';
 import { WavyBackground } from '../../components/organisms/background';
