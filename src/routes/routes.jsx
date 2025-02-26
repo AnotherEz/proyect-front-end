@@ -4,9 +4,8 @@ import Default from "../components/templates/Default";
 import Footer from "../components/templates/Footer";
 import Home from "../pages/Informative/Home";
 import Servicios from "/src/pages/Informative/servicios";
-
-import Login from  '../pages/Auth/login'; 
-import Register from "../pages/Auth/register";
+import Login from "../pages/auth/login";
+import Register from "../pages/auth/register";
 import Dashboard from "../pages/User/dashboard";
 
 
