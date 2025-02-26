@@ -26,7 +26,7 @@ function Register() {
   const [isLoading, setIsLoading] = useState(false); // Loader para el formulario
   const [checkingSession, setCheckingSession] = useState(true); // Loader para la sesión
 
-  // ✅ Verificar sesión activa al cargar el componente
+  //  Verificar sesión activa al cargar el componente
   useEffect(() => {
     const checkSession = async () => {
       const token = localStorage.getItem("authToken");
