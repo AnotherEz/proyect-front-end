@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
-import LoginForm from "../../components/molecules/LoginForm";
-import Loader from "../../components/atoms/Loader";
-import "../../assets/Auth Sheets/s-Login.css";
+import { useAuth } from "/src/hooks/useAuth";
+import LoginForm from "/src/components/molecules/LoginForm";
+import Loader from "/src/components/atoms/Loader";
+import "/src/assets/Auth Sheets/s-Login.css";
 
 const Login = () => {
   const navigate = useNavigate();

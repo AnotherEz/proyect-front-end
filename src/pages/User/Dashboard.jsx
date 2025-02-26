@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getUser, logout } from "../../api/authService";
-import Loader from "../../components/atoms/Loader";
-import "../../assets/User Sheets/s-User.css";
+import { getUser, logout } from "/src/api/authService";
+import Loader from "/src/components/atoms/Loader";
+import "/src/assets/User Sheets/s-User.css";
 
 function Dashboard() {
   const [user, setUser] = useState(null);

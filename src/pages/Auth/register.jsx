@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { register, login, getUser } from "../../api/authService";
-import "../../assets/Auth Sheets/s-Login.css";
-import Loader from "../../components/atoms/Loader"; 
+import { register, login, getUser } from "/src/api/authService";
+import "/src/assets/Auth Sheets/s-Login.css";
+import Loader from "/src/components/atoms/Loader"; 
 
 function Register() {
   const navigate = useNavigate();
