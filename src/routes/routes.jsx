@@ -5,7 +5,7 @@ import Footer from "/src/components/templates/Footer";
 import Home from "/src/pages/Informative/Home";
 import Servicios from "/src/pages/Informative/servicios";
 
-import Login from "/src/pages/auth/login"; 
+import Login from "../../pages/auth/login";
 import Register from "/src/pages/auth/register";
 import Dashboard from "/src/pages/User/Dashboard";
 
